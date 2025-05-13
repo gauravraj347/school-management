@@ -8,21 +8,28 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  connectTimeout: 60000, // Longer timeout for remote connections
+  ssl: process.env.DB_SSL === 'true' ? true : undefined
 });
 
 // Function to initialize the database and create tables if they don't exist
 async function initDatabase() {
+  let connection;
   try {
-    // Create the database if it doesn't exist
-    const connection = await mysql.createConnection({
+    console.log('Attempting to connect to database...');
+    // For db4free.net, we should connect directly to the database
+    // instead of trying to create it (which requires additional privileges)
+    connection = await mysql.createConnection({
       host: process.env.DB_HOST,
       user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      connectTimeout: 60000, // Longer timeout for remote connections
+      ssl: process.env.DB_SSL === 'true' ? true : undefined
     });
     
-    await connection.query(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME}`);
-    await connection.end();
+    console.log('Successfully connected to database');
     
     // Create the schools table if it doesn't exist
     const createTableQuery = `
@@ -36,11 +43,16 @@ async function initDatabase() {
       )
     `;
     
-    await pool.query(createTableQuery);
+    await connection.query(createTableQuery);
+    await connection.end();
     console.log('Database initialized successfully');
   } catch (error) {
     console.error('Error initializing database:', error);
-    throw error;
+    if (connection) await connection.end().catch(err => console.error('Error closing connection:', err));
+    
+    // Don't throw the error, just log it and continue
+    // This allows the app to start even if DB connection fails initially
+    console.log('Will retry database connection when needed');
   }
 }
 

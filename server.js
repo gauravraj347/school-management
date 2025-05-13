@@ -33,19 +33,26 @@ app.get('/', (req, res) => {
 // Initialize database and start server
 async function startServer() {
   try {
-    // Initialize the database
-    await initDatabase();
+    // Initialize the database - but don't wait for it to complete
+    // This allows the server to start even if there are database issues
+    initDatabase().catch(err => {
+      console.warn('Database initialization had an issue, but server will continue:', err.message);
+    });
     
     // Start the server
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`API endpoints:`);
-      console.log(`- Add School: http://localhost:${PORT}/api/addSchool`);
-      console.log(`- List Schools: http://localhost:${PORT}/api/listSchools`);
+      
+      // Use the actual host for deployed environments
+      const baseUrl = process.env.NODE_ENV === 'production' ? '' : `http://localhost:${PORT}`;
+      console.log(`- Add School: ${baseUrl}/api/addSchool`);
+      console.log(`- List Schools: ${baseUrl}/api/listSchools`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
-    process.exit(1);
+    // Don't exit the process, just log the error
+    console.log('Attempting to continue despite errors...');
   }
 }
 
