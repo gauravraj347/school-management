@@ -1,0 +1,15 @@
+# Dependency directories
+node_modules/
+
+# Environment variables
+.env
+
+# Package lock file (optional, but often ignored)
+# package-lock.json
+
+# Logs
+npm-debug.log*
+
+# IDE / Editor specific files
+.vscode/
+.idea/
